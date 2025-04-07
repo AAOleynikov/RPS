@@ -2,8 +2,6 @@
 #include "parameter_parser.hpp"
 #include "string_oscillation.hpp"
 
-
-/// Основная программа.
 int main(int argc, char** argv) {
   try {
     ParameterParser parser(argc, argv);
