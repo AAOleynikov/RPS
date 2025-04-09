@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(multithread)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -O0")
 
 ## Поиск gnuplot'а
 find_program(GNUPLOT gnuplot)

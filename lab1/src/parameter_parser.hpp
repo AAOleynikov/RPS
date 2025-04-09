@@ -1,7 +1,7 @@
 /*! @file parameter_parser.hpp
 Заголовочный файл класса разбора параметров моделирования струны.
-@author Козов А.В.
-@date 2025.03.15 */
+@author Козов А.В., Олейников А.А.
+@date 2025.04.09 */
 
 #ifndef PARAMETER_PARSER_HPP
 #define PARAMETER_PARSER_HPP
@@ -84,7 +84,7 @@ class ParameterParser {
         break;
       case 'n':
         threads = atoi(optarg);
-        if (threads == 0) {
+        if (threads <= 0) {
           throw std::invalid_argument("StringParameters: threads number must be positive");
         }
         break;
