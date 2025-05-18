@@ -1,7 +1,7 @@
 /*! @file maze.hpp
-Заголовочный файл игры Лабиринт.
+Заголовочный файл игры "Лабиринт".
 @author Олейников А.А.
-@date 2024.05.13 */
+@date 2025.05.13 */
 
 #ifndef MAZE_HPP
 #define MAZE_HPP
@@ -20,24 +20,38 @@
 /// Пространство имён учебных примеров дисциплины "Разработка программных систем".
 namespace ssd
 {
+    /*!
+    @enum Command
+    @brief Перечисление возможных команд игрока.
+    */
     enum class Command {
-        FORWARD,  // вперёд
-        BACKWARD, // назад
-        RIGHT,    // направо
-        LEFT,     // налево
-        EXIT,     // выход
-        UNKNOWN   // неопознанная команда
+        FORWARD,  ///< Движение вперёд
+        BACKWARD, ///< Движение назад
+        RIGHT,    ///< Поворот направо
+        LEFT,     ///< Поворот налево
+        EXIT,     ///< Выход из игры
+        UNKNOWN   ///< Неопознанная команда
     };
 
+    /**
+     * @struct Keyword
+     * @brief Структура ключевого слова и соответствующей команды.
+     */
     struct Keyword {
-        const char* word;    // Строка-ключ
-        Command cmd;         // Соответствующая команда
+        const char* word;    ///< Строка-ключ
+        Command cmd;         ///< Команда, соответствующая ключу
     };
 
+    /*!
+     @brief Преобразует строку в команду.
+     
+     @param input Строка, введённая пользователем.
+     @return Команда, соответствующая введённой строке.
+    */
     Command parse_command(const char* input) {
         const Keyword keywords[] = {
         {"назад",  Command::BACKWARD},  
-        {"выход",  Command::EXIT},
+        {"сдаюсь",  Command::EXIT},
         {"вперёд", Command::FORWARD},  
         {"налево", Command::LEFT},
         {"направо",Command::RIGHT}   
@@ -51,21 +65,36 @@ namespace ssd
         return Command::UNKNOWN;
     }
 
+    /*!
+    @class Maze
+    @brief Класс, реализующий игровой лабиринт.
+    */
     class Maze
     {
     public:
+        /*!
+        @brief Конструктор лабиринта.
+         
+        @param n Размер стороны лабиринта.
+        */
         Maze(unsigned n) : size(n),
                            h_wall(n + 1, std::vector<bool>(n, true)),
                            v_wall(n, std::vector<bool>(n + 1, true))
         {
             // Инициализация игрока и выхода
             player_x = 0;
-            player_y = 0;
-            exit_x = n - 1;
-            exit_y = n - 1;
-            generateMaze();
+            player_y = n - 1;
+            exit_x   = n - 1;
+            exit_y = 0;
+            generateMaze(player_x, player_y);;
         }
 
+        /*!
+        @brief Проверяет, достиг ли игрок выхода.
+         
+        @return true, если игрок достиг выхода.
+        @return false, если игрок ещё не достиг выхода.
+        */
         bool playerWin() {
             if (player_x == exit_x && player_y == exit_y) {
                 return true;
@@ -73,7 +102,11 @@ namespace ssd
             return false;
         } 
 
-        // Получить ASCII-рисунок лабиринта с позицией игрока 'P' и выходом 'E'
+        /*!
+        @brief Возвращает строку ASCII-графики текущего состояния лабиринта.
+         
+        @return std::string ASCII-графика лабиринта.
+        */
         std::string toAscii()
         {
             std::ostringstream out;
@@ -113,9 +146,17 @@ namespace ssd
             return out.str();
         }
 
-        // Попытка движения: dx,dy = {0,-1}(вверх), {0,1}(вниз), {1,0}(вправо), {-1,0}(влево)
+        /*!
+        @brief Пытается переместить игрока.
+         
+        @param dx Смещение по оси X.
+        @param dy Смещение по оси Y.
+        @return true, если перемещение возможно и выполнено.
+        @return false, если перемещение невозможно (есть стена или выход за границы).
+        */
         bool movePlayer(int dx, int dy)
         {
+            // Попытка движения: dx,dy = {0,-1}(вверх), {0,1}(вниз), {1,0}(вправо), {-1,0}(влево)
             int nx = player_x + dx, ny = player_y + dy;
             if (nx < 0 || ny < 0 || nx >= size || ny >= size)
                 return false;
@@ -152,13 +193,32 @@ namespace ssd
         int player_x, player_y;
         int exit_x, exit_y;
 
-        // Рекурсивная генерация лабиринта (DFS) для связности
-        void generateMaze()
+
+        unsigned size;                         ///< Длина стороны лабиринта
+        std::vector<std::vector<bool>> h_wall; ///< Горизонтальные стены (размером (size+1) x size)
+        std::vector<std::vector<bool>> v_wall; ///< Вертикальные стены (размером size x (size+1))
+        int player_x, player_y;                ///< Координаты игрока
+        int exit_x, exit_y;                    ///< Координаты выхода из лабиринта
+
+        /*!
+        @brief Генерирует лабиринт с помощью алгоритма DFS, начиная с заданной ячейки.
+    
+        @param sx X-координата стартовой ячейки для DFS
+        @param sy Y-координата стартовой ячейки для DFS
+        */
+        void generateMaze(int sx, int sy)
         {
             std::vector<std::vector<bool>> visited(size, std::vector<bool>(size, false));
-            carve(0, 0, visited);
+            carve(sx, sy, visited);
         }
 
+        /*!
+        @brief Рекурсивная функция для построения проходов.
+         
+        @param cx Текущая координата X.
+        @param cy Текущая координата Y.
+        @param vis Матрица посещённых ячеек.
+        */
         void carve(int cx, int cy, std::vector<std::vector<bool>> &vis)
         {
             vis[cy][cx] = true;

@@ -1,9 +1,10 @@
 /*! @file client.cpp
 Исходный файл клиента эхо-сервера на базе сокетов Беркли.
 @author Козов А.В.
-@date 2024.01.03 */
+@author Олейников А.А.
+@date 2025.05.13 */
 
-#include "client.hpp"
+#include "client_maze.hpp"
 #include "maze.hpp"
 #include <cstring>
 

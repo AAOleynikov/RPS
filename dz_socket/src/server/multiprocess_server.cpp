@@ -1,9 +1,10 @@
 /*! @file multiprocess_echo_server.cpp
 Исходный файл многопроцессного эхо-сервера на базе сокетов Беркли.
 @author Козов А.В.
-@date 2024.01.03 */
+@author Олейников А.А.
+@date 2025.05.13 */
 
-#include "multiprocess_echo_server.hpp"
+#include "multiprocess_maze_server.hpp"
 #include "maze.hpp"
 #include <cstring>
 
@@ -12,11 +13,11 @@
 using namespace ssd;
 
 // Конструктор.
-MultiprocessEchoServer::MultiprocessEchoServer(const std::string& h, const unsigned short p) {
+MultiprocessMazeServer::MultiprocessMazeServer(const std::string& h, const unsigned short p) {
   // Создание сокета.
   _server_socket = socket(AF_INET, SOCK_STREAM, 0);
   if (_server_socket < 0) {
-    throw std::runtime_error("[MultiprocessEchoServer::MultiprocessEchoServer] socket(2) call error");
+    throw std::runtime_error("[MultiprocessMazeServer::MultiprocessMazeServer] socket(2) call error");
   }
   // Подготовка сетевого адреса для связывания.
   sockaddr_in server_address;
@@ -25,26 +26,26 @@ MultiprocessEchoServer::MultiprocessEchoServer(const std::string& h, const unsig
   hostent* host_name;
   host_name = gethostbyname(h.c_str()); // Преобразование названия хоста в IP-адрес.
   if (host_name == nullptr) {
-    throw std::runtime_error("[MultiprocessEchoServer::MultiprocessEchoServer] gethostbyname(3) call error");
+    throw std::runtime_error("[MultiprocessMazeServer::MultiprocessMazeServer] gethostbyname(3) call error");
   }
   server_address.sin_port = htons(p);
   memcpy(&server_address.sin_addr.s_addr, host_name->h_addr, host_name->h_length);
   // Связывание сокета с заданным сетевым адресом.
   if (bind(_server_socket, reinterpret_cast<const sockaddr*>(&server_address), sizeof(server_address)) != 0) {
-    throw std::runtime_error("[MultiprocessEchoServer::MultiprocessEchoServer] bind(2) call error");
+    throw std::runtime_error("[MultiprocessMazeServer::MultiprocessMazeServer] bind(2) call error");
   }
-  std::cout << "[MultiprocessEchoServer::MultiprocessEchoServer] Ready on " << h << ":" << p << std::endl;
+  std::cout << "[MultiprocessMazeServer::MultiprocessMazeServer] Ready on " << h << ":" << p << std::endl;
 }
 
 // Деструктор.
-MultiprocessEchoServer::~MultiprocessEchoServer() {
+MultiprocessMazeServer::~MultiprocessMazeServer() {
   // ?
 }
 
 // Основной метод.
-void MultiprocessEchoServer::run() {
+void MultiprocessMazeServer::run() {
   if (listen(_server_socket, CONNECTION_QUEUE_SIZE) != 0) {
-    throw std::runtime_error("[MultiprocessEchoServer::run] listen(2) call error");
+    throw std::runtime_error("[MultiprocessMazeServer::run] listen(2) call error");
   }
   while (1) {
     sockaddr client_address;
@@ -52,16 +53,16 @@ void MultiprocessEchoServer::run() {
     // Ожидание запроса подключения клиента для обработки.
     int client_socket = accept(_server_socket, &client_address, &address_size);
     if (client_socket < 0) {
-      throw std::runtime_error("[MultiprocessEchoServer::run] accept(2) call error");
+      throw std::runtime_error("[MultiprocessMazeServer::run] accept(2) call error");
     }
     char* client_host = inet_ntoa(reinterpret_cast<sockaddr_in*>(&client_address)->sin_addr);
     unsigned short client_port = ntohs(reinterpret_cast<sockaddr_in*>(&client_address)->sin_port);
-    std::cout << "[MultiprocessEchoServer::run] New connection from " << client_host
+    std::cout << "[MultiprocessMazeServer::run] New connection from " << client_host
               << ":" << client_port << std::endl;
 
     int child_pid = fork();
     if (child_pid < 0) {
-      throw std::runtime_error("[MultiprocessEchoServer::run] fork(2) call error");
+      throw std::runtime_error("[MultiprocessMazeServer::run] fork(2) call error");
     } else if (child_pid == 0) {
       // Процесс-потомок работает с клиентом через новый сокет, серверный сокет ему не нужен.
       close(_server_socket);
@@ -76,15 +77,15 @@ void MultiprocessEchoServer::run() {
 }
 
 // Обработка подключения клиента.
-void MultiprocessEchoServer::handleConnection(const int s) {
+void MultiprocessMazeServer::handleConnection(const int s) {
   // Приём длины стороны лабиринта s
   uint32_t maze_size;
   int length = read(s, &maze_size, sizeof(maze_size));
   maze_size = ntohl(maze_size);
   if (length < 0) {
-      throw std::runtime_error("[MultiprocessEchoServer::handleConnection] recv(2) call error");
+      throw std::runtime_error("[MultiprocessMazeServer::handleConnection] recv(2) call error");
   } else if (length == 0) {
-      std::cout << "[MultiprocessEchoServer::handleConnection] No connection" << std::endl;
+      std::cout << "[MultiprocessMazeServer::handleConnection] No connection" << std::endl;
       return;
   }
 
@@ -92,9 +93,9 @@ void MultiprocessEchoServer::handleConnection(const int s) {
   length = read(s, &n, sizeof(n));
   n = ntohl(n);
   if (length < 0) {
-      throw std::runtime_error("[MultiprocessEchoServer::handleConnection] recv(2) call error");
+      throw std::runtime_error("[MultiprocessMazeServer::handleConnection] recv(2) call error");
   } else if (length == 0) {
-      std::cout << "[MultiprocessEchoServer::handleConnection] No connection" << std::endl;
+      std::cout << "[MultiprocessMazeServer::handleConnection] No connection" << std::endl;
       return;
   }
 
@@ -119,7 +120,7 @@ void MultiprocessEchoServer::handleConnection(const int s) {
   length = send(s, buffer, std::strlen(buffer), 0);
   if (length < 0) {
     delete[] buffer;
-    throw std::runtime_error("[MultiprocessEchoServer::handleConnection] send(2) call error");
+    throw std::runtime_error("[MultiprocessMazeServer::handleConnection] send(2) call error");
   }
 
   for (int i = 0; i < n; i++) {
@@ -127,9 +128,9 @@ void MultiprocessEchoServer::handleConnection(const int s) {
     int length = read(s, buffer, BUFFER_SIZE);
     if (length < 0) {
       delete[] buffer;
-      throw std::runtime_error("[MultiprocessEchoServer::handleConnection] recv(2) call error");
+      throw std::runtime_error("[MultiprocessMazeServer::handleConnection] recv(2) call error");
     } else if (length == 0) {
-      std::cout << "[MultiprocessEchoServer::handleConnection] No connection" << std::endl;
+      std::cout << "[MultiprocessMazeServer::handleConnection] No connection" << std::endl;
       break;
     }
     std::cout << buffer << std::endl;
@@ -209,7 +210,7 @@ void MultiprocessEchoServer::handleConnection(const int s) {
     length = send(s, &game_status, sizeof(game_status), 0);
     if (length < 0) {
       delete[] buffer;
-      throw std::runtime_error("[MultiprocessEchoServer::handleConnection] send(2) call error");
+      throw std::runtime_error("[MultiprocessMazeServer::handleConnection] send(2) call error");
     }
     else if (length == 0) {
       std::cout << "[Client::request] No connection" << std::endl;
@@ -221,7 +222,7 @@ void MultiprocessEchoServer::handleConnection(const int s) {
     length = send(s, buffer, buff_shift+2, 0);
     if (length < 0) {
       delete[] buffer;
-      throw std::runtime_error("[MultiprocessEchoServer::handleConnection] send(2) call error");
+      throw std::runtime_error("[MultiprocessMazeServer::handleConnection] send(2) call error");
     }
     else if (length == 0) {
       std::cout << "[Client::request] No connection" << std::endl;
@@ -243,7 +244,7 @@ void MultiprocessEchoServer::handleConnection(const int s) {
     length = send(s, buffer, buff_shift+2, 0);
     if (length < 0) {
       delete[] buffer;
-      throw std::runtime_error("[MultiprocessEchoServer::handleConnection] send(2) call error");
+      throw std::runtime_error("[MultiprocessMazeServer::handleConnection] send(2) call error");
     }
     else if (length == 0) {
       std::cout << "[Client::request] No connection" << std::endl;

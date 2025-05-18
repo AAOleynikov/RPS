@@ -1,10 +1,11 @@
-/*! @file multiprocess_echo_server.hpp
-Заголовочный файл многопроцессного эхо-сервера на базе сокетов Беркли.
+/*! @file multiprocess_maze_server.hpp
+Заголовочный файл многопроцессного сервера игры "Лабиринт" на базе сокетов Беркли.
 @author Козов А.В.
-@date 2024.01.03 */
+@author Олейников А.А.
+@date 2025.05.18 */
 
-#ifndef MULTIPROCESS_ECHO_SERVER_HPP
-#define MULTIPROCESS_ECHO_SERVER_HPP
+#ifndef MULTIPROCESS_MAZE_SERVER_HPP
+#define MULTIPROCESS_MAZE_SERVER_HPP
 
 #include <iostream>
 #include <stdexcept>
@@ -20,8 +21,8 @@
 /// Пространство имён учебных примеров дисциплины "Разработка программных систем".
 namespace ssd {
 
-  /*! Класс эхо-сервера с использованием сокетов Беркли (протокол TCP). */
-  class MultiprocessEchoServer {
+  /*! Класс сервера игры "Лабиринт" с использованием сокетов Беркли (протокол TCP). */
+  class MultiprocessMazeServer {
   public:
 
     /*! Создаёт экземпляр эхо-сервера.
@@ -30,12 +31,12 @@ namespace ssd {
     @throw std::runtime_error При ошибке создания или связывания сокета.
     @param h Адрес (название хоста) сервера.
     @param p Порт сервера для подключения клиентов. */
-    explicit MultiprocessEchoServer(const std::string& h = "localhost", const unsigned short p = 1024u);
+    explicit MultiprocessMazeServer(const std::string& h = "localhost", const unsigned short p = 1024u);
 
-    /*! Удаляет экземпляр эхо-сервера. */
-    ~MultiprocessEchoServer();
+    /*! Удаляет экземпляр сервера игры "Лабиринт". */
+    ~MultiprocessMazeServer();
 
-    /*! Запускает эхо-сервер.
+    /*! Запускает сервера игры "Лабиринт".
     @details Метод запускает процесс прослушивания сокета на наличие запросов подключения. При наличии запроса
     вызывает `fork(2)` и создаёт процесс-потомок для работы с подключившимся клиентом. В случае ошибки вызывает
     исключение.
@@ -60,4 +61,4 @@ namespace ssd {
 } // ssd namespace
 
 
-#endif // MULTIPROCESS_ECHO_SERVER_HPP
+#endif // MULTIPROCESS_MAZE_SERVER_HPP

@@ -1,14 +1,15 @@
 /*! @file server_main.cpp
 Главный файл приложения эхо-сервера на базе сокетов Беркли.
 @author Козов А.В.
-@date 2024.01.03 */
+@author Олейников А.А.
+@date 2025.05.13 */
 
 #include <iostream>
 #include <string>
 #include <signal.h>
 #include <sys/wait.h> 
 
-#include "multiprocess_echo_server.hpp"
+#include "multiprocess_maze_server.hpp"
 
 /*! Обрабатывает сигнал завершения работы потомков для предотвращения появления "зомби".
 @param s Сигнал. */
@@ -18,10 +19,10 @@ void handleSignal(int s) {
   }
 }
 
-/*! Главная функция создаёт экземпляр @p ssd::MultiprocessEchoServer и запускает его основной метод.
+/*! Главная функция создаёт экземпляр @p ssd::MultiprocessMazeServer и запускает его основной метод.
 @details Функция проверяет аргументы запуска для поиска ключей `-h`, `-p`, задаёт обработчик сигнала завершения
-процесса-потомка, создаёт экземпляр сервера @p ssd::MultiprocessEchoServer и запускает его работу вызовом
-@p ssd::MultiprocessEchoServer::run . Далее следует блок обработки исключений c последующим выходом из программы.
+процесса-потомка, создаёт экземпляр сервера @p ssd::MultiprocessMazeServer и запускает его работу вызовом
+@p ssd::MultiprocessMazeServer::run . Далее следует блок обработки исключений c последующим выходом из программы.
 @dot
   digraph main {
     ranksep=0.25;
@@ -60,7 +61,7 @@ int main(int argc, char** argv) {
   signal(SIGCHLD, handleSignal);
   // Создание сервера и запуск его работы.
   try {
-      ssd::MultiprocessEchoServer server(host, port);
+      ssd::MultiprocessMazeServer server(host, port);
       server.run();
   } catch(const std::runtime_error& e) {
     std::cerr << "EchoServer application error: " << e.what() << std::endl;
