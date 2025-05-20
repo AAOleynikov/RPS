@@ -8,7 +8,7 @@
 #include "client_maze.hpp"
 
 /*! Главная функция создаёт экземпляр @p pd::Client и запускает его основной метод @p pd::Client::request.
-@details Функция проверяет аргументы запуска для поиска ключей `-h`, `-p`, `-n`, создаёт экземпляр клиента @p
+@details Функция проверяет аргументы запуска для поиска ключей `-h`, `-p`, `-n`, `-s`, `-t`, создаёт экземпляр клиента @p
 pd::Client и запускает его работу вызовом @p pd::Client::request . Далее следует блок обработки исключений  и выход
 из программы. */
 int main(int argc, char** argv) {
@@ -21,19 +21,25 @@ int main(int argc, char** argv) {
   bool test_mode = false;
   while ((opt = getopt(argc, argv, "h:p:n:s:t")) != -1) {
     switch (opt) {
-    case 'h':
+    case 'h': // host сервера
       host = optarg;
       break;
-    case 'p':
+    case 'p': // port сервера
       port = static_cast<unsigned short>(atoi(optarg));
       break;
-    case 'n':
+    case 'n': // количество ходов, которые можно совершить
       number = static_cast<unsigned>(atoi(optarg));
+      if (number <= 0) {
+        throw std::invalid_argument("StringParameters: Количество ходов при инициализации должно быть больше 0");
+      }
       break;
-    case 's':
+    case 's': // длина стороны поля лабиринта
       maze_size = static_cast<unsigned>(atoi(optarg));
+      if (maze_size <= 2) {
+        throw std::invalid_argument("StringParameters: Длина стороны лабиринта должна быть больше или равна 3");
+      }
       break;
-    case 't':
+    case 't': // режим для тестирования
       test_mode = true;
       break;
     default:

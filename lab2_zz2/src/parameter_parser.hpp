@@ -106,10 +106,10 @@ public:
     parameters.threads = threads;
     parameters.no_output = service_mode;
     // Начальные и граничные условия.
-    parameters.conditions.force = zeroForce; // harmonicForce
-    parameters.conditions.begin = nonZeroBeginCondition; // zeroBeginCondition
+    parameters.conditions.force = harmonicForce;
+    parameters.conditions.begin = zeroBeginCondition; 
     parameters.conditions.left = Boundary{ BoundaryType::first, 0. };
-    parameters.conditions.right = Boundary{ BoundaryType::first, 0. };
+    parameters.conditions.right = Boundary{ BoundaryType::second, 0. };
     return parameters;
   }
 

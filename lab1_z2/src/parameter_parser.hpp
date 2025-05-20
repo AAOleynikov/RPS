@@ -108,7 +108,7 @@ class ParameterParser {
     parameters.no_output = service_mode;
     // Начальные и граничные условия.
     parameters.conditions.force = harmonicForce; 
-    parameters.conditions.begin = nonZeroBeginCondition;
+    parameters.conditions.begin = zeroBeginCondition;
     parameters.conditions.left = Boundary{ BoundaryType::first, 0. };
     parameters.conditions.right = Boundary{ BoundaryType::second, 0. };
 

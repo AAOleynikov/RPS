@@ -1,5 +1,5 @@
 /*! @file client.cpp
-Исходный файл клиента эхо-сервера на базе сокетов Беркли.
+Исходный файл клиента игры "Лабиринт" на базе сокетов Беркли.
 @author Козов А.В.
 @author Олейников А.А.
 @date 2025.05.13 */
@@ -72,13 +72,12 @@ void Client::request(const std::string& h, const unsigned short p, const unsigne
     }
   std::cout << buffer << std::endl;
 
-  uint32_t status;
+  uint32_t status = 52;
   // Сам процесс игры
   while(true) {
     std::cout << "> ";
     if(!std::cin.get(buffer, BUFFER_SIZE)) break;
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');    //########################
-
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
     buffer[std::strlen(buffer)] = '\0';
     data_size = send(_socket, buffer, std::strlen(buffer)+1, 0);
@@ -88,16 +87,20 @@ void Client::request(const std::string& h, const unsigned short p, const unsigne
     }
 
     // Чтение кода ((«успешно», «там стена, осталось Y ходов», «вы проиграли», «вы выиграли»,))
+    uint32_t old_status = status;
     data_size = read(_socket, &status, sizeof(status));
     if (data_size < 0) {
       delete[] buffer;
       throw std::runtime_error("[Client::request] read(2) call error");
     }
     else if (data_size == 0) {
-      std::cout << "[Client::request] No connection" << std::endl;
+      if (old_status != 0 && old_status != 2 && old_status != 5) {
+        std::cout << "[Client::request] No connection" << std::endl;
+      }
       break;
     }
     status = ntohl(status);
+    std::cout << status << std::endl;
 
     data_size = read(_socket, buffer, BUFFER_SIZE);
     if (data_size < 0) {
@@ -110,9 +113,8 @@ void Client::request(const std::string& h, const unsigned short p, const unsigne
     }   
 
     std::cout << buffer << std::endl;
-
+    std::cout << status << std::endl;
     if (status == 0 || status == 2 || status == 5) break;
-
   }
   delete[] buffer;
 }

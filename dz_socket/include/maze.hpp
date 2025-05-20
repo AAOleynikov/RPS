@@ -187,13 +187,6 @@ namespace ssd
         }
 
     private:
-        unsigned size;
-        std::vector<std::vector<bool>> h_wall; // горизонтальные стены (size+1 x size)
-        std::vector<std::vector<bool>> v_wall; // вертикальные стены (size x size+1)
-        int player_x, player_y;
-        int exit_x, exit_y;
-
-
         unsigned size;                         ///< Длина стороны лабиринта
         std::vector<std::vector<bool>> h_wall; ///< Горизонтальные стены (размером (size+1) x size)
         std::vector<std::vector<bool>> v_wall; ///< Вертикальные стены (размером size x (size+1))

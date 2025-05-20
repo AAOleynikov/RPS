@@ -7,7 +7,7 @@
 set terminal gif animate size 1024,512 font "sans,14" # delay 10
 ## Параметр delay задаёт время между кадрами в 0,01 с, значение по умолчанию 5.
 
-datafile = 'data.txt'
+datafile = './build/data.txt'
 outfile = 'oscillation.gif'
 
 ## Передача аргументов работает только при вызове с ключом -с (см. команду запуска выше)!

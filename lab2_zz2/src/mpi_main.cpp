@@ -1,14 +1,14 @@
 /*! @file mpi_main.cpp
 Главный файл приложения моделирования колебаний струны с использованием MPI (лабораторная работа №2 по курсу "РПС").
 @author Козов А.В.
-@date 2025.04.15 */
+@author Олейников А.А.
+@date 2025.05.20 */
 
 #include <chrono>
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <mpi.h>
-#include <math.h>
 
 #include "parameter_parser.hpp"
 
@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
   StringParameters parameters = parser.getParameters();
   const unsigned long solution_size = round(string_length / parameters.spatial_step) + 1ul;
   std::ofstream output;
-  //auto begin_calculation_time = std::chrono::system_clock::now();
+  auto begin_calculation_time = std::chrono::system_clock::now();
 
   double* init_data;
   const unsigned parameter_buffer_size = 5;
@@ -123,14 +123,12 @@ int main(int argc, char** argv) {
       if (my_rank == 0 && i == 1ul) {
         if (parameters.conditions.left.type == BoundaryType::first) {
           local_current[i] = parameters.conditions.left.value;
-        } else {
-          // TODO
         }
       } else if (my_rank == total - 1 && i == local_size) {
         if (parameters.conditions.right.type == BoundaryType::first) {
           local_current[i] = parameters.conditions.right.value;
         } else {
-          // TODO
+          local_current[i] = local_current[i-1]; // рассм. гр. усл. ...=0
         }
       } else {
         const double x = (my_rank * local_spatial_step_number / total + i - 1) * local_spatial_step;
@@ -152,7 +150,7 @@ int main(int argc, char** argv) {
         output << "\n\n";
       }
     }
-    MPI_Barrier(MPI_COMM_WORLD); // ?
+
     double* temp_pointer = local_previous;
     local_previous = local_last;
     local_last = local_current;
@@ -166,8 +164,11 @@ int main(int argc, char** argv) {
     delete[] init_data;
   }
   MPI_Finalize();
-  //auto duration = std::chrono::system_clock::now() - begin_calculation_time;
-  //std::cout << "  > Computation time " << std::chrono::duration<double>(duration).count() << " s" << std::endl;
-  //std::cout << "Complete" << std::endl;
+
+  if (parameters.no_output) {
+    auto duration = std::chrono::system_clock::now() - begin_calculation_time;
+    //std::cout << "  > Computation time " << std::chrono::duration<double>(duration).count() << " s" << std::endl;
+    std::cout << std::chrono::duration<double>(duration).count() << std::endl;
+  }
   return 0;
 }

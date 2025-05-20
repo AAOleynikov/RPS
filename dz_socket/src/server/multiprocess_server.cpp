@@ -1,5 +1,5 @@
 /*! @file multiprocess_echo_server.cpp
-Исходный файл многопроцессного эхо-сервера на базе сокетов Беркли.
+Исходный файл многопроцессного сервера игры "Лабиринт" на базе сокетов Беркли.
 @author Козов А.В.
 @author Олейников А.А.
 @date 2025.05.13 */
@@ -7,7 +7,6 @@
 #include "multiprocess_maze_server.hpp"
 #include "maze.hpp"
 #include <cstring>
-
 
 //using namespace std; // Вызывает неопределённость при работе с системными вызовами `bind(2)`, `open(2)`!
 using namespace ssd;
@@ -67,7 +66,7 @@ void MultiprocessMazeServer::run() {
       // Процесс-потомок работает с клиентом через новый сокет, серверный сокет ему не нужен.
       close(_server_socket);
       handleConnection(client_socket);
-      shutdown(client_socket, 0);
+      shutdown(client_socket, SHUT_WR);
       close(client_socket);
       break;
     }
@@ -99,7 +98,7 @@ void MultiprocessMazeServer::handleConnection(const int s) {
       return;
   }
 
-  // Создаём объект лабиринт размера igp.s
+  // Создаём объект лабиринт размера maze_size
   std::cout << maze_size << std::endl;
   std::cout << n << std::endl;
   Maze maze(maze_size);
@@ -116,14 +115,13 @@ void MultiprocessMazeServer::handleConnection(const int s) {
 Для досрочного выхода ведите: выход\n\
 Осталось ходов: %d\n%s", n, maze_ascii.c_str());  
 
-  n--;
   length = send(s, buffer, std::strlen(buffer), 0);
   if (length < 0) {
     delete[] buffer;
     throw std::runtime_error("[MultiprocessMazeServer::handleConnection] send(2) call error");
   }
 
-  for (int i = 0; i < n; i++) {
+  for (int i = n; i > 0; i--) {
     buff_shift = 0;
     int length = read(s, buffer, BUFFER_SIZE);
     if (length < 0) {
@@ -165,7 +163,7 @@ void MultiprocessMazeServer::handleConnection(const int s) {
           const char* msg_uncnown = "Неизвестная комманда, попробуйте снова.\n";
           memcpy(buffer+buff_shift, msg_uncnown, std::strlen(msg_uncnown));
           buff_shift += std::strlen(msg_uncnown);
-          i--; // не забираем у пользователя попытку
+          i++; // не забираем у пользователя попытку
           break;
       }
     }
@@ -198,12 +196,18 @@ void MultiprocessMazeServer::handleConnection(const int s) {
           buff_shift += std::strlen(no_move_msg);
         }
         // Сколько ходов осталось + текущий лабиринт в ASCII
-        maze_ascii = maze.toAscii();
-        std::string moves_left_msg = "Осталось ходов: " + std::to_string(n - i - 1) + "\n";
-        memcpy(buffer+buff_shift, moves_left_msg.c_str(), moves_left_msg.length());
-        buff_shift += moves_left_msg.length();
-        memcpy(buffer+buff_shift, maze_ascii.c_str(), maze_ascii.length());
-        buff_shift += maze_ascii.length();
+        if (i > 1) {
+          maze_ascii = maze.toAscii();
+          std::string moves_left_msg = "Осталось ходов: " + std::to_string(i-1) + "\n";
+          memcpy(buffer+buff_shift, moves_left_msg.c_str(), moves_left_msg.length());
+          buff_shift += moves_left_msg.length();
+          memcpy(buffer+buff_shift, maze_ascii.c_str(), maze_ascii.length());
+          buff_shift += maze_ascii.length();
+        }
+        else {
+          game_status = htonl(5);
+          break;
+        }
       }
     } // end if Command::EXIT
     
@@ -232,15 +236,28 @@ void MultiprocessMazeServer::handleConnection(const int s) {
     if (cmd == Command::EXIT) {
       break; 
     } 
+    if (game_status == 0 || game_status == 2 || game_status == 5) break;
   } // end for n
-
+  
   if (game_status != 0 && game_status != 2) {
     game_status = htonl(5);
+    buff_shift = 0;
     const char* defeat_msg = "О нет... Похоже попыток больше нет и вы проиграли.\n@}‑;‑'‑‑‑";
     memcpy(buffer+buff_shift, defeat_msg, std::strlen(defeat_msg));
     buff_shift += std::strlen(defeat_msg);
     buffer[buff_shift] = '\n';
     buffer[buff_shift+1] = '\0';
+
+    length = send(s, &game_status, sizeof(game_status), 0);
+    if (length < 0) {
+      delete[] buffer;
+      throw std::runtime_error("[MultiprocessMazeServer::handleConnection] send(2) call error");
+    }
+    else if (length == 0) {
+      std::cout << "[Client::request] No connection" << std::endl;
+
+    }
+    else {
     length = send(s, buffer, buff_shift+2, 0);
     if (length < 0) {
       delete[] buffer;
@@ -249,8 +266,11 @@ void MultiprocessMazeServer::handleConnection(const int s) {
     else if (length == 0) {
       std::cout << "[Client::request] No connection" << std::endl;
     }
-  }
 
+    std::cout << "Сообщение о конце игры отправлено пользователю!!" << std::endl;
+    std::cout << buffer << std::endl;
+    }
+  }
 
   delete[] buffer;
 }
