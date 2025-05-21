@@ -6,65 +6,16 @@
 #ifndef MAZE_HPP
 #define MAZE_HPP
 
-#include <sys/types.h>
-#include <unistd.h>
-#include <cstring>
-#include <cstdlib>
-#include <vector>
-#include <string>
-#include <random>
-#include <algorithm>
-#include <signal.h>
-#include <sstream>
+#include <cstring>       
+#include <vector>       
+#include <string>       
+#include <random>        
+#include <algorithm>     
+#include <sstream>      
 
 /// Пространство имён учебных примеров дисциплины "Разработка программных систем".
 namespace ssd
 {
-    /*!
-    @enum Command
-    @brief Перечисление возможных команд игрока.
-    */
-    enum class Command {
-        FORWARD,  ///< Движение вперёд
-        BACKWARD, ///< Движение назад
-        RIGHT,    ///< Поворот направо
-        LEFT,     ///< Поворот налево
-        EXIT,     ///< Выход из игры
-        UNKNOWN   ///< Неопознанная команда
-    };
-
-    /**
-     * @struct Keyword
-     * @brief Структура ключевого слова и соответствующей команды.
-     */
-    struct Keyword {
-        const char* word;    ///< Строка-ключ
-        Command cmd;         ///< Команда, соответствующая ключу
-    };
-
-    /*!
-     @brief Преобразует строку в команду.
-     
-     @param input Строка, введённая пользователем.
-     @return Команда, соответствующая введённой строке.
-    */
-    Command parse_command(const char* input) {
-        const Keyword keywords[] = {
-        {"назад",  Command::BACKWARD},  
-        {"сдаюсь",  Command::EXIT},
-        {"вперёд", Command::FORWARD},  
-        {"налево", Command::LEFT},
-        {"направо",Command::RIGHT}   
-        };
-        for (const auto& keyword : keywords) {
-            // Полное сравнение строк
-            if (strcmp(input, keyword.word) == 0) {
-                return keyword.cmd;
-            }
-        }
-        return Command::UNKNOWN;
-    }
-
     /*!
     @class Maze
     @brief Класс, реализующий игровой лабиринт.

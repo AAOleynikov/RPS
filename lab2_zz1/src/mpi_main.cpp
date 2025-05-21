@@ -123,14 +123,10 @@ int main(int argc, char** argv) {
       if (my_rank == 0 && i == 1ul) {
         if (parameters.conditions.left.type == BoundaryType::first) {
           local_current[i] = parameters.conditions.left.value;
-        } else {
-          // TODO
         }
       } else if (my_rank == total - 1 && i == local_size) {
         if (parameters.conditions.right.type == BoundaryType::first) {
           local_current[i] = parameters.conditions.right.value;
-        } else {
-          local_current[i] = local_current[i-1]; // рассм. гр. усл. ...=0
         }
       } else {
         const double x = (my_rank * local_spatial_step_number / total + i - 1) * local_spatial_step;
@@ -167,7 +163,7 @@ int main(int argc, char** argv) {
   }
   MPI_Finalize();
 
-  if (parameters.no_output) {
+  if (parameters.no_output && my_rank == 0) {
     auto duration = std::chrono::system_clock::now() - begin_calculation_time;
     //std::cout << "  > Computation time " << std::chrono::duration<double>(duration).count() << " s" << std::endl;
     std::cout << std::chrono::duration<double>(duration).count() << std::endl;

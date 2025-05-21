@@ -71,6 +71,6 @@ int main(int argc, char** argv) {
     return 2;
   }
   // Корректное завершение работы.
-  std::cout << "EchoServer application finished" << std::endl;
+  std::cout << "Server application finished" << std::endl;
   return 0;
 }

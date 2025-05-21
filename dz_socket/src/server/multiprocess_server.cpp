@@ -75,6 +75,51 @@ void MultiprocessMazeServer::run() {
   }
 }
 
+//  /*!
+//  @enum Command
+//  @brief Перечисление возможных команд игрока.
+//  */
+  enum class Command {
+    FORWARD,  ///< Движение вперёд
+    BACKWARD, ///< Движение назад
+    RIGHT,    ///< Поворот направо
+    LEFT,     ///< Поворот налево
+    EXIT,     ///< Выход из игры
+    UNKNOWN   ///< Неопознанная команда
+  };
+
+//  /**
+//  * @struct Keyword
+//  * @brief Структура ключевого слова и соответствующей команды.
+//  */
+  struct Keyword {
+    const char* word;    ///< Строка-ключ
+    Command cmd;         ///< Команда, соответствующая ключу
+  };
+
+//  /*!
+//  @brief Преобразует строку в команду.
+//    
+//  @param input Строка, введённая пользователем.
+//  @return Команда, соответствующая введённой строке.
+//  */
+  Command parse_command(const char* input) {
+      const Keyword keywords[] = {
+      {"назад",  Command::BACKWARD},  
+      {"сдаюсь",  Command::EXIT},
+      {"вперёд", Command::FORWARD},  
+      {"налево", Command::LEFT},
+      {"направо",Command::RIGHT}   
+      };
+      for (const auto& keyword : keywords) {
+          // Полное сравнение строк
+          if (strcmp(input, keyword.word) == 0) {
+              return keyword.cmd;
+          }
+      }
+      return Command::UNKNOWN;
+  }
+
 // Обработка подключения клиента.
 void MultiprocessMazeServer::handleConnection(const int s) {
   // Приём длины стороны лабиринта s
@@ -98,21 +143,32 @@ void MultiprocessMazeServer::handleConnection(const int s) {
       return;
   }
 
+  // Количество записанных байт в буффер
+  int buff_shift = 0;
+  // Создание буфера для приёма и отправки сообщений.
+  char* buffer = new char[BUFFER_SIZE];
+
+  // приём имени
+  length = read(s, buffer, BUFFER_SIZE);
+  if (length < 0) {
+    delete[] buffer;
+    throw std::runtime_error("[MultiprocessMazeServer::handleConnection] recv(2) call error");
+  } else if (length == 0) {
+    std::cout << "[MultiprocessMazeServer::handleConnection] No connection" << std::endl;
+    delete[] buffer;
+    return;
+  }
+  buff_shift = length;
+
   // Создаём объект лабиринт размера maze_size
-  std::cout << maze_size << std::endl;
-  std::cout << n << std::endl;
   Maze maze(maze_size);
   uint32_t game_status; // 0 - Выход, 1 - Неизвестная комманда, 2 - Победа, 3 - Ход совершён, 4 - Встречена стена, 5 - Проигрыш
   // Получаем ASCII представление текущего лабиринта
   std::string maze_ascii = maze.toAscii();
 
-  // Создание буфера для приёма и отправки сообщений.
-  char* buffer = new char[BUFFER_SIZE];
-  // Количество записанных байт в буффер
-  int buff_shift = 0;
-  std::sprintf(buffer, "Добро пожаловать в игру Лабиринт! \n\
+  std::sprintf(buffer+buff_shift-1, ", добро пожаловать, в игру Лабиринт! \n\
 Для управления вводите комманды: вперёд, назад, направо, налево\n\
-Для досрочного выхода ведите: выход\n\
+Для досрочного выхода ведите: сдаюсь\n\
 Осталось ходов: %d\n%s", n, maze_ascii.c_str());  
 
   length = send(s, buffer, std::strlen(buffer), 0);
@@ -129,9 +185,9 @@ void MultiprocessMazeServer::handleConnection(const int s) {
       throw std::runtime_error("[MultiprocessMazeServer::handleConnection] recv(2) call error");
     } else if (length == 0) {
       std::cout << "[MultiprocessMazeServer::handleConnection] No connection" << std::endl;
+      game_status = htonl(0);
       break;
     }
-    std::cout << buffer << std::endl;
 
     // Смещение по клеткам лабиринта
     int dx=0, dy=0;
@@ -152,7 +208,7 @@ void MultiprocessMazeServer::handleConnection(const int s) {
         break;
       case Command::EXIT: {
           game_status = htonl(0);
-          const char* msg_exit = "Вы сдались. Игра окончена.\n";
+          const char* msg_exit = "Вы сдались. Игра окончена.";
           memcpy(buffer+buff_shift, msg_exit, std::strlen(msg_exit));
           buff_shift += std::strlen(msg_exit);
           break;
@@ -160,7 +216,7 @@ void MultiprocessMazeServer::handleConnection(const int s) {
 
       default: {
           game_status = htonl(1);
-          const char* msg_uncnown = "Неизвестная комманда, попробуйте снова.\n";
+          const char* msg_uncnown = "Неизвестная комманда, попробуйте снова.";
           memcpy(buffer+buff_shift, msg_uncnown, std::strlen(msg_uncnown));
           buff_shift += std::strlen(msg_uncnown);
           i++; // не забираем у пользователя попытку
@@ -175,7 +231,7 @@ void MultiprocessMazeServer::handleConnection(const int s) {
       // Если новая позиция выйгрышная
       if (maze.playerWin()){
         game_status = htonl(2);
-        const char* msg_win = "Вы выйграли! Поздравляем!\n";
+        const char* msg_win = "Вы выйграли! Поздравляем!";
         memcpy(buffer+buff_shift, msg_win, std::strlen(msg_win));
         buff_shift += std::strlen(msg_win);
       }
@@ -218,6 +274,7 @@ void MultiprocessMazeServer::handleConnection(const int s) {
     }
     else if (length == 0) {
       std::cout << "[Client::request] No connection" << std::endl;
+      game_status = htonl(0);
       break;
     }
     
@@ -230,6 +287,7 @@ void MultiprocessMazeServer::handleConnection(const int s) {
     }
     else if (length == 0) {
       std::cout << "[Client::request] No connection" << std::endl;
+      game_status = htonl(0);
       break;
     }
 
@@ -255,7 +313,6 @@ void MultiprocessMazeServer::handleConnection(const int s) {
     }
     else if (length == 0) {
       std::cout << "[Client::request] No connection" << std::endl;
-
     }
     else {
     length = send(s, buffer, buff_shift+2, 0);
@@ -266,9 +323,6 @@ void MultiprocessMazeServer::handleConnection(const int s) {
     else if (length == 0) {
       std::cout << "[Client::request] No connection" << std::endl;
     }
-
-    std::cout << "Сообщение о конце игры отправлено пользователю!!" << std::endl;
-    std::cout << buffer << std::endl;
     }
   }
 

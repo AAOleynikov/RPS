@@ -12,6 +12,7 @@
 #include <string>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <cstring>
 #include <unistd.h>
 
 #define CONNECTION_QUEUE_SIZE 512 ///< Размер очереди ожидания подключения.

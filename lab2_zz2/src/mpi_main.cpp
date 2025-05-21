@@ -27,9 +27,11 @@ struct NodeParameters {
 @param n Номер рассчитываемого узла.
 @return Рассчитанное значение. */
 double calculateNode(const NodeParameters& p, double f, unsigned long n) {
-  const double inner_sum = p.last[n + 1] - 2. * p.last[n] + p.last[n - 1];
-  const double time_multiplier = pow(phase_velocity, 2.) * inner_sum / pow(p.spatial_step,  2.);
-  const double last_term = (time_multiplier + f) * pow(p.time_step, 2.);
+  const double a_multiplier = p.last[n + 1] - 2. * p.last[n] + p.last[n - 1];
+  const double delta_x_square = p.spatial_step * p.spatial_step;
+  const double time_multiplier = phase_velocity * phase_velocity * a_multiplier / delta_x_square;
+  const double delta_t_square = p.time_step * p.time_step;
+  const double last_term = (time_multiplier + f) * delta_t_square;
   const double result = 2. * p.last[n] - p.previous[n] + last_term;
   return result;
 }

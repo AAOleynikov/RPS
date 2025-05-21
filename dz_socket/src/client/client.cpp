@@ -5,8 +5,8 @@
 @date 2025.05.13 */
 
 #include "client_maze.hpp"
-#include "maze.hpp"
 #include <cstring>
+#include <limits>
 
 //using namespace std; // Вызывает неопределённость при работе с системными вызовами `bind(2)`, `open(2)`!
 using namespace ssd;
@@ -64,20 +64,49 @@ void Client::request(const std::string& h, const unsigned short p, const unsigne
     throw std::runtime_error("[Client::request] send(2) call error");
   }
 
+  // Запрос имени пользователя
   char* buffer = new char[BUFFER_SIZE];
-  data_size = read(_socket, buffer, BUFFER_SIZE);
-    if (data_size < 0) {
-      delete[] buffer;
-      throw std::runtime_error("[Client::request] read(2) call error");
+
+  if (!t) {
+    std::cout << "Введите своё имя перед началом игры\n> ";
+    if(!std::cin.get(buffer, BUFFER_SIZE)) {
+      std::cout << "[Client::request] Error while reading std::cin" << std::endl;
+      return;
     }
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');  
+  }
+  else {
+    const char* test_name_msg = "test_user";
+    memcpy(buffer, test_name_msg, std::strlen(test_name_msg));
+  }
+  buffer[std::strlen(buffer)] = '\0';
+
+  data_size = send(_socket, buffer, std::strlen(buffer)+1, 0);
+  if (data_size < 0) {
+    delete[] buffer;
+    throw std::runtime_error("[Client::request] send(2) call error");
+  }
+
+  data_size = read(_socket, buffer, BUFFER_SIZE);
+  if (data_size < 0) {
+    delete[] buffer;
+    throw std::runtime_error("[Client::request] read(2) call error");
+  }
+
   std::cout << buffer << std::endl;
 
   uint32_t status = 52;
   // Сам процесс игры
   while(true) {
-    std::cout << "> ";
-    if(!std::cin.get(buffer, BUFFER_SIZE)) break;
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    if (!t) {
+      std::cout << "> ";
+      if(!std::cin.get(buffer, BUFFER_SIZE)) break;
+      std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    }
+    else {
+      const char* test_msg = "tralalelotralala";
+      memcpy(buffer, test_msg, std::strlen(test_msg));
+    }
 
     buffer[std::strlen(buffer)] = '\0';
     data_size = send(_socket, buffer, std::strlen(buffer)+1, 0);
@@ -100,7 +129,6 @@ void Client::request(const std::string& h, const unsigned short p, const unsigne
       break;
     }
     status = ntohl(status);
-    std::cout << status << std::endl;
 
     data_size = read(_socket, buffer, BUFFER_SIZE);
     if (data_size < 0) {
@@ -111,9 +139,8 @@ void Client::request(const std::string& h, const unsigned short p, const unsigne
       std::cout << "[Client::request] No connection" << std::endl;
       break;
     }   
-
+    
     std::cout << buffer << std::endl;
-    std::cout << status << std::endl;
     if (status == 0 || status == 2 || status == 5) break;
   }
   delete[] buffer;
