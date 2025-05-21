@@ -5,8 +5,13 @@
 @date 2025.05.13 */
 
 #include "client_maze.hpp"
+#include <vector>
 #include <cstring>
+#include <random>
 #include <limits>
+#include <iostream>
+#include <thread>
+#include <chrono>
 
 //using namespace std; // Вызывает неопределённость при работе с системными вызовами `bind(2)`, `open(2)`!
 using namespace ssd;
@@ -29,9 +34,11 @@ Client::Client() {
 
 // Деструктор.
 Client::~Client() {
-  // Закрытие сокета.
-  shutdown(_socket, 0);
-  close(_socket);
+  if (_socket >= 0) {
+    shutdown(_socket, SHUT_RDWR);
+    close(_socket);
+   _socket = -1;
+  }
 }
 
 void Client::request(const std::string& h, const unsigned short p, const unsigned n, const unsigned s, const bool t) {
@@ -52,96 +59,78 @@ void Client::request(const std::string& h, const unsigned short p, const unsigne
     throw std::runtime_error("[Client::request] connect(2) call error");
   }
 
-  // Отправка серверу длину стороны лабиринта s и максимального числа шагов до поражения
-  uint32_t s_s = htonl(static_cast<uint32_t>(s));
-  int data_size = write(_socket, &s_s, sizeof(s_s));
-  if (data_size < 0) {
-    throw std::runtime_error("[Client::request] send(2) call error");
-  }
-  uint32_t s_n = htonl(static_cast<uint32_t>(n));
-  data_size = write(_socket, &s_n, sizeof(s_n));
-  if (data_size < 0) {
-    throw std::runtime_error("[Client::request] send(2) call error");
-  }
+    // Отправляем параметры s и n
+    uint32_t net_s = htonl(static_cast<uint32_t>(s));
+    if (write(_socket, &net_s, sizeof(net_s)) < 0)
+        throw std::runtime_error("[Client::request] send(2) call error");
 
-  // Запрос имени пользователя
-  char* buffer = new char[BUFFER_SIZE];
+    uint32_t net_n = htonl(static_cast<uint32_t>(n));
+    if (write(_socket, &net_n, sizeof(net_n)) < 0)
+        throw std::runtime_error("[Client::request] send(2) call error");
 
-  if (!t) {
-    std::cout << "Введите своё имя перед началом игры\n> ";
-    if(!std::cin.get(buffer, BUFFER_SIZE)) {
-      std::cout << "[Client::request] Error while reading std::cin" << std::endl;
-      return;
-    }
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');  
-  }
-  else {
-    const char* test_name_msg = "test_user";
-    memcpy(buffer, test_name_msg, std::strlen(test_name_msg));
-  }
-  buffer[std::strlen(buffer)] = '\0';
+    std::vector<char> buffer(BUFFER_SIZE);
 
-  data_size = send(_socket, buffer, std::strlen(buffer)+1, 0);
-  if (data_size < 0) {
-    delete[] buffer;
-    throw std::runtime_error("[Client::request] send(2) call error");
-  }
-
-  data_size = read(_socket, buffer, BUFFER_SIZE);
-  if (data_size < 0) {
-    delete[] buffer;
-    throw std::runtime_error("[Client::request] read(2) call error");
-  }
-
-  std::cout << buffer << std::endl;
-
-  uint32_t status = 52;
-  // Сам процесс игры
-  while(true) {
+    // Читаем или генерируем имя
     if (!t) {
-      std::cout << "> ";
-      if(!std::cin.get(buffer, BUFFER_SIZE)) break;
-      std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        std::cout << "Введите своё имя перед началом игры\n> ";
+        if (!std::cin.get(buffer.data(), BUFFER_SIZE))
+            return;                              // ничего не сломается, buffer очистится автоматически
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    } else {
+        const char* test_name = "test_user";
+        std::strncpy(buffer.data(), test_name, BUFFER_SIZE-1);
     }
-    else {
-      const char* test_msg = "tralalelotralala";
-      memcpy(buffer, test_msg, std::strlen(test_msg));
-    }
+    if (!t) buffer[std::strlen(buffer.data())] = '\0';
 
-    buffer[std::strlen(buffer)] = '\0';
-    data_size = send(_socket, buffer, std::strlen(buffer)+1, 0);
-    if (data_size < 0) {
-      delete[] buffer;
-      throw std::runtime_error("[Client::request] send(2) call error");
-    }
+    // Отправляем имя
+    if (send(_socket, buffer.data(), std::strlen(buffer.data())+1, 0) < 0)
+        throw std::runtime_error("[Client::request] send(2) call error");
 
-    // Чтение кода ((«успешно», «там стена, осталось Y ходов», «вы проиграли», «вы выиграли»,))
-    uint32_t old_status = status;
-    data_size = read(_socket, &status, sizeof(status));
-    if (data_size < 0) {
-      delete[] buffer;
-      throw std::runtime_error("[Client::request] read(2) call error");
-    }
-    else if (data_size == 0) {
-      if (old_status != 0 && old_status != 2 && old_status != 5) {
-        std::cout << "[Client::request] No connection" << std::endl;
-      }
-      break;
-    }
-    status = ntohl(status);
+    // Принимаем приветствие
+    ssize_t len = read(_socket, buffer.data(), BUFFER_SIZE);
+    if (len < 0)
+        throw std::runtime_error("[Client::request] read(2) call error");
+    if(!t) std::cout.write(buffer.data(), len);
+    std::cout << "\n";
 
-    data_size = read(_socket, buffer, BUFFER_SIZE);
-    if (data_size < 0) {
-      delete[] buffer;
-      throw std::runtime_error("[Client::request] read(2) call error");
+    uint32_t status = 0;
+    // Игровой цикл
+    while (true) {
+        // Считываем ход
+        if (!t) {
+            std::cout << "> ";
+            if (!std::cin.get(buffer.data(), BUFFER_SIZE)) break;
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        } else {
+            // по логике работы сервера на некорректные комманды он не снижает попытки
+            const char* test_cmd = "tesc_cmd";
+            std::strncpy(buffer.data(), test_cmd, BUFFER_SIZE-1);
+            //for (int i = 0; i < 10000; i++)
+            //    for (int j = 0; j < 1000; j++);
+        }
+        buffer[std::strlen(buffer.data())] = '\0';
+
+        // Отправляем команду
+        if (send(_socket, buffer.data(), std::strlen(buffer.data())+1, 0) < 0)
+            throw std::runtime_error("[Client::request] send(2) call error");
+
+        // Читаем код состояния игровой сессии
+        uint32_t net_status;
+        ssize_t r = read(_socket, &net_status, sizeof(net_status));
+        if (r < 0)
+            throw std::runtime_error("[Client::request] read(2) call error");
+        if (r == 0) break;  // соединение закрылось
+        status = ntohl(net_status);
+
+        // Читаем ASCII-ответ
+        r = read(_socket, buffer.data(), BUFFER_SIZE);
+        if (r < 0)
+            throw std::runtime_error("[Client::request] read(2) call error");
+        if (r == 0) break;  // соединение закрылось
+
+        std::cout.write(buffer.data(), r);
+        if (!t) std::cout << "\n";
+
+        if (status == 0 || status == 2 || status == 5) break;
     }
-    else if (data_size == 0) {
-      std::cout << "[Client::request] No connection" << std::endl;
-      break;
-    }   
-    
-    std::cout << buffer << std::endl;
-    if (status == 0 || status == 2 || status == 5) break;
-  }
-  delete[] buffer;
 }

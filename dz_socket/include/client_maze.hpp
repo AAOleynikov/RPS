@@ -39,6 +39,15 @@ namespace ssd {
     @throw std::runtime_error При ошибке подключения, оправки или приёма сообщения. */
     void request(const std::string& h, const unsigned short p, const unsigned n, const unsigned s, const bool t);
 
+
+    /// Закрывает соединение и останавливает приложение
+   void stop() {
+      if (_socket >= 0) {
+        shutdown(_socket, SHUT_RDWR);
+        close(_socket);
+        _socket = -1;
+      }
+   }
   protected:
 
     int _socket; ///< Сокет для подключения к серверу.

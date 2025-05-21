@@ -38,7 +38,9 @@ MultiprocessMazeServer::MultiprocessMazeServer(const std::string& h, const unsig
 
 // Деструктор.
 MultiprocessMazeServer::~MultiprocessMazeServer() {
-  // ?
+    shutdown(_server_socket, SHUT_RDWR);
+    close(_server_socket);
+    std::cout << "[MultiprocessMazeServer::~MultiprocessMazeServer] Server socket closed." << std::endl;
 }
 
 // Основной метод.
@@ -231,7 +233,7 @@ void MultiprocessMazeServer::handleConnection(const int s) {
       // Если новая позиция выйгрышная
       if (maze.playerWin()){
         game_status = htonl(2);
-        const char* msg_win = "Вы выйграли! Поздравляем!";
+        const char* msg_win = "Вы выйграли! Поздравляем!\0";
         memcpy(buffer+buff_shift, msg_win, std::strlen(msg_win));
         buff_shift += std::strlen(msg_win);
       }
@@ -287,17 +289,16 @@ void MultiprocessMazeServer::handleConnection(const int s) {
     }
     else if (length == 0) {
       std::cout << "[Client::request] No connection" << std::endl;
-      game_status = htonl(0);
       break;
     }
 
     if (cmd == Command::EXIT) {
       break; 
     } 
-    if (game_status == 0 || game_status == 2 || game_status == 5) break;
+    if (game_status == htonl(0) || game_status == htonl(2) || game_status == htonl(5)) break;
   } // end for n
   
-  if (game_status != 0 && game_status != 2) {
+  if (game_status != htonl(0) && game_status != htonl(2)) {
     game_status = htonl(5);
     buff_shift = 0;
     const char* defeat_msg = "О нет... Похоже попыток больше нет и вы проиграли.\n@}‑;‑'‑‑‑";

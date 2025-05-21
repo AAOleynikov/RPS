@@ -1,12 +1,19 @@
 #!/bin/bash
 
-if [[ $# -lt 1 ]]; then
-  echo "no client path!"
-  exit 1
-fi
-COUNTER=0
-while [[ COUNTER -lt 200 ]]; do
-  ./$1 -n 100 < Doxyfile > /dev/null &
-  let COUNTER++
+# Массив для хранения PID клиентов
+CLIENT_PIDS=()
+
+# Завершение всех клиентов при прерывании
+trap 'kill -TERM "${CLIENT_PIDS[@]}" 2>/dev/null; wait "${CLIENT_PIDS[@]}"' SIGINT
+
+# Запуск клиентов
+for i in {1..100}; do
+    ( 
+        ./build/client -t -p 9001 2>&1 | 
+        awk -v id="$i" '{print "[CLIENT " id "] " $0}' 
+    ) &
+    CLIENT_PIDS+=($!)
 done
-echo "finish"
+
+# Ожидание завершения
+wait "${CLIENT_PIDS[@]}"
